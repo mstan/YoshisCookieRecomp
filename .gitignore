@@ -1,0 +1,7 @@
+build/
+*.nes
+*.bin
+*.sav
+*.log
+*.zip
+.mcp.json
