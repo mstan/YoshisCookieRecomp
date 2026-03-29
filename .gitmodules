@@ -1,0 +1,6 @@
+[submodule "nesrecomp"]
+	path = nesrecomp
+	url = https://github.com/mstan/nesrecomp.git
+[submodule "nestopia-core"]
+	path = nestopia-core
+	url = https://github.com/libretro/nestopia.git
