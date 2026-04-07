@@ -1,0 +1,270 @@
+# game.toml — Yoshi's Cookie (NES, Mapper 4 / MMC3, 8 PRG banks, 8 CHR ROM banks)
+
+[game]
+output_prefix = "yoshis-cookie"
+
+# ── Trampolines ────────────────────────────────────────────────────────────
+# $F424: reads 3 inline bytes (bank, addr_lo, addr_hi) after JSR.
+# Bank switch function at $F46D: sets MMC3 R6/R7 to map 16KB at $8000-$BFFF.
+[[trampoline]]
+addr = 0xF424
+inline_bytes = 3
+bs_fn_addr = 0xF46D
+
+# $C024 is a JMP $F424 thunk — same trampoline, different entry point (394 call sites)
+[[trampoline]]
+addr = 0xC024
+inline_bytes = 3
+bs_fn_addr = 0xF46D
+
+# ── Inline dispatch ────────────────────────────────────────────────────────
+# $F573: JSR $F573 followed by address table, A selects entry
+[[inline_dispatch]]
+addr = 0xF573
+
+# $C000 is a JMP $F573 thunk — same inline dispatch, different entry point (58 call sites)
+[[inline_dispatch]]
+addr = 0xC000
+
+# ── Extra functions (dispatch misses) ──────────────────────────────────────
+[functions]
+fixed = [0xC048]
+bank0 = [0x8221, 0x8109, 0x8101, 0x8106, 0x8104]
+bank1 = [0x8146, 0x8CFE, 0x8C54, 0x9260, 0x9360, 0xAFDC]
+bank3 = [0x8BAA]
+bank4 = [0xA819, 0xB489, 0x8149]
+bank5 = [0x9B8F, 0x91C4]
+bank6 = [0x9CFA, 0x813C, 0x82A4, 0x8382]
+
+# ── Data regions ───────────────────────────────────────────────────────────
+# Bank 0
+[[data_region]]
+bank = 0
+start = 0xA529
+end = 0xA5B0
+
+[[data_region]]
+bank = 0
+start = 0xAD63
+end = 0xADC0
+
+[[data_region]]
+bank = 0
+start = 0xB6C4
+end = 0xB6DC
+
+[[data_region]]
+bank = 0
+start = 0xB749
+end = 0xB760
+
+# Bank 1
+[[data_region]]
+bank = 1
+start = 0xD828
+end = 0xD864
+
+[[data_region]]
+bank = 1
+start = 0xC848
+end = 0xC860
+
+# Bank 2
+[[data_region]]
+bank = 2
+start = 0x8780
+end = 0x87A5
+
+[[data_region]]
+bank = 2
+start = 0x8809
+end = 0x8832
+
+[[data_region]]
+bank = 2
+start = 0x8ABF
+end = 0x8AE2
+
+[[data_region]]
+bank = 2
+start = 0x8C29
+end = 0x8C68
+
+[[data_region]]
+bank = 2
+start = 0x8C85
+end = 0x8CD4
+
+[[data_region]]
+bank = 2
+start = 0x8D1E
+end = 0x8D67
+
+[[data_region]]
+bank = 2
+start = 0x8E23
+end = 0x8E4A
+
+[[data_region]]
+bank = 2
+start = 0x8EC6
+end = 0x8EEA
+
+[[data_region]]
+bank = 2
+start = 0x8F14
+end = 0x8F87
+
+[[data_region]]
+bank = 2
+start = 0x8FCE
+end = 0x8FF2
+
+[[data_region]]
+bank = 2
+start = 0x9294
+end = 0x929A
+
+[[data_region]]
+bank = 2
+start = 0xA236
+end = 0xA265
+
+[[data_region]]
+bank = 2
+start = 0xA332
+end = 0xA398
+
+[[data_region]]
+bank = 2
+start = 0xA3E9
+end = 0xA418
+
+[[data_region]]
+bank = 2
+start = 0xA931
+end = 0xA97F
+
+[[data_region]]
+bank = 2
+start = 0xAA3D
+end = 0xAA63
+
+# Bank 3
+[[data_region]]
+bank = 3
+start = 0x8753
+end = 0x8769
+
+[[data_region]]
+bank = 3
+start = 0x90F2
+end = 0x9104
+
+[[data_region]]
+bank = 3
+start = 0xA0A4
+end = 0xA0D9
+
+[[data_region]]
+bank = 3
+start = 0xA271
+end = 0xA31B
+
+[[data_region]]
+bank = 3
+start = 0xA44D
+end = 0xA47B
+
+[[data_region]]
+bank = 3
+start = 0xA6A6
+end = 0xA71B
+
+[[data_region]]
+bank = 3
+start = 0xA7AA
+end = 0xA7FB
+
+[[data_region]]
+bank = 3
+start = 0xA84D
+end = 0xA87B
+
+[[data_region]]
+bank = 3
+start = 0xAE90
+end = 0xAEA6
+
+# Bank 4
+[[data_region]]
+bank = 4
+start = 0x9F48
+end = 0x9F5E
+
+[[data_region]]
+bank = 4
+start = 0xA9F1
+end = 0xAA04
+
+# Bank 5
+[[data_region]]
+bank = 5
+start = 0x93CF
+end = 0x93E9
+
+[[data_region]]
+bank = 5
+start = 0x9538
+end = 0x9551
+
+[[data_region]]
+bank = 5
+start = 0x9613
+end = 0x963C
+
+[[data_region]]
+bank = 5
+start = 0xA7C6
+end = 0xA808
+
+[[data_region]]
+bank = 5
+start = 0xA815
+end = 0xA82E
+
+[[data_region]]
+bank = 5
+start = 0xA9C2
+end = 0xA9D6
+
+# Bank 6
+[[data_region]]
+bank = 6
+start = 0x9F0F
+end = 0x9F57
+
+[[data_region]]
+bank = 6
+start = 0xA4E0
+end = 0xA5F3
+
+[[data_region]]
+bank = 6
+start = 0xA752
+end = 0xA80A
+
+[[data_region]]
+bank = 6
+start = 0xC143
+end = 0xC174
+
+[[data_region]]
+bank = 6
+start = 0xD566
+end = 0xD59F
+
+[[data_region]]
+bank = 6
+start = 0xE5E4
+end = 0xE624

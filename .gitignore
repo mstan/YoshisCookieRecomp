@@ -11,3 +11,12 @@ debug.ini
 *.cht
 disasm_ref/
 tmp_*.py
+
+# nesrecomp/ is a Windows directory junction → F:/Projects/nesrecomp.
+# Not tracked in this repo. Pinned SHA recorded in nesrecomp.pin and
+# enforced at CMake configure time.
+nesrecomp
+
+# nestopia-core was a submodule for verify mode. Removed from CI builds
+# (-DENABLE_NESTOPIA_ORACLE=OFF). Local dev builds can clone it manually.
+nestopia-core/
