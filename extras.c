@@ -31,6 +31,17 @@ void game_on_init(void) {
     if (g_run_mode != RUN_MODE_NATIVE && g_rom_path_for_extras) {
         verify_mode_init(g_rom_path_for_extras);
     }
+
+    /* Auto-register followers on stack-page addresses where native has $97/$22
+     * garbage and emu has tile-index VRAM update data. F4C0 reads stack page
+     * as VRAM buffer, so we want to find who populates this buffer on native. */
+    debug_server_add_follower(0x0100, -1);
+    debug_server_add_follower(0x0101, -1);
+    debug_server_add_follower(0x0102, -1);
+    debug_server_add_follower(0x0103, -1);
+    debug_server_add_follower(0x0105, -1);
+    debug_server_add_follower(0x0107, -1);
+    debug_server_add_follower(0x0108, -1);
 }
 
 void game_on_frame(uint64_t frame_count) { (void)frame_count; }
@@ -108,7 +119,27 @@ void game_run_main(void) {
     }
 }
 
-int game_dispatch_override(uint16_t addr) { (void)addr; return 0; }
+int game_dispatch_override(uint16_t addr) {
+    if (addr == 0x8104) {
+        extern int g_current_bank;
+#ifdef RECOMP_STACK_TRACKING
+        extern const char *g_recomp_stack[];
+        extern int g_recomp_stack_top;
+        const char *top = (g_recomp_stack_top > 0) ? g_recomp_stack[g_recomp_stack_top - 1] : "(none)";
+#else
+        const char *top = "";
+#endif
+        static int trap_count = 0;
+        if (trap_count < 10) {
+            fprintf(stderr, "[DISPATCH $8104] bank=%d frame=%llu fn=%s S=0x%02X\n",
+                    g_current_bank, (unsigned long long)g_frame_count, top, (unsigned)g_cpu.S);
+            fflush(stderr);
+            trap_count++;
+        }
+    }
+    (void)addr;
+    return 0;
+}
 
 uint8_t game_ram_read_hook(uint16_t pc, uint16_t addr, uint8_t val) {
     (void)pc; (void)addr;

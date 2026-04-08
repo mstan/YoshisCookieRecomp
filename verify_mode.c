@@ -117,6 +117,21 @@ int verify_mode_run_nmi(void) {
 
     int passed = (diff_count == 0);
 
+    /* Dump full RAM diff at a steady-state frame (after Nestopia init settles) */
+    if (g_frame_count == 60 && diff_count > 0) {
+        FILE *fp = fopen("frame60_diffs.log", "w");
+        if (fp) {
+            fprintf(fp, "Frame 60 RAM diffs (native vs emu): %d bytes\n", diff_count);
+            fprintf(fp, "addr  native  emu\n");
+            for (int i = 0; i < 0x0800; i++) {
+                if (g_ram[i] != emu_ram[i])
+                    fprintf(fp, "$%04X  $%02X     $%02X\n", i, g_ram[i], emu_ram[i]);
+            }
+            fclose(fp);
+            fprintf(stderr, "[verify] frame 60 full diff dumped to frame60_diffs.log\n");
+        }
+    }
+
     if (!passed) {
         s_divergence_count++;
         fprintf(stderr, "[verify] DIVERGE frame %llu: %d bytes differ | first: $%04X native=0x%02X emu=0x%02X"

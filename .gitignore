@@ -20,3 +20,6 @@ nesrecomp
 # nestopia-core was a submodule for verify mode. Removed from CI builds
 # (-DENABLE_NESTOPIA_ORACLE=OFF). Local dev builds can clone it manually.
 nestopia-core/
+
+# Local Ghidra project (per-developer reverse engineering workspace)
+ghidra/

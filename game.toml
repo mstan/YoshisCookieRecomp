@@ -2,6 +2,7 @@
 
 [game]
 output_prefix = "yoshis-cookie"
+push_all_jsr = true
 
 # ── Trampolines ────────────────────────────────────────────────────────────
 # $F424: reads 3 inline bytes (bank, addr_lo, addr_hi) after JSR.
@@ -10,12 +11,16 @@ output_prefix = "yoshis-cookie"
 addr = 0xF424
 inline_bytes = 3
 bs_fn_addr = 0xF46D
+bank_save_addr = 0xBFFF
+bank_reg = "A"  # F46D reads A (F424 source: LDA $0A; JSR $F46D)
 
 # $C024 is a JMP $F424 thunk — same trampoline, different entry point (394 call sites)
 [[trampoline]]
 addr = 0xC024
 inline_bytes = 3
 bs_fn_addr = 0xF46D
+bank_save_addr = 0xBFFF
+bank_reg = "A"
 
 # ── Inline dispatch ────────────────────────────────────────────────────────
 # $F573: JSR $F573 followed by address table, A selects entry

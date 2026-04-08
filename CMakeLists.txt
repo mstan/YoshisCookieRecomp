@@ -83,6 +83,8 @@ target_include_directories(YoshisCookieRecomp PRIVATE
 
 target_link_libraries(YoshisCookieRecomp PRIVATE ${SDL2_LIBRARIES})
 
+target_compile_definitions(YoshisCookieRecomp PRIVATE RECOMP_STACK_TRACKING NES_TRACE_STACK_WRITES)
+
 if(ENABLE_NESTOPIA_ORACLE)
     target_sources(YoshisCookieRecomp PRIVATE
         nestopia_bridge.cpp

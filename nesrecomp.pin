@@ -1,13 +1,13 @@
 # nesrecomp.pin — pins this game's expected nesrecomp version.
 #
-# NOTE: b033573 is currently a LOCAL-ONLY commit on F:/Projects/nesrecomp.
+# NOTE: df6cb09 is currently a LOCAL-ONLY commit on F:/Projects/nesrecomp.
 # Chain on top of canonical origin/master (812d259):
-#   b033573 ppu_renderer: add g_disable_render_irq toggle
-#   81b8a47 ppu_renderer: restore t-register frame-start sync + abs_nt_y
-#   f134358 function_finder: split-table dispatch + PHA/PHA fake-return
-#   27b6031 function_finder: auto-detect split-table JMP(zp) dispatch
+#   df6cb09 trampoline: fix direct-call stack imbalance + stack instrumentation
+#   ed4137f ppu_renderer: restore t-register sync, abs_nt_y, g_disable_render_irq
+#   174b202 function_finder: split-table dispatch with PHA/PHA fake-return
+#   8619146 function_finder: auto-detect split-table JMP(zp) dispatch
 #   812d259 (origin/master)
 # When this work lands upstream, re-point this pin to the new origin/master sha.
 
 branch = origin/master
-sha    = ed4137f5d4512c5301dbdb8556560ae1be53cb6b
+sha    = df6cb09ce30600282048f6481e344cc205e72d86
