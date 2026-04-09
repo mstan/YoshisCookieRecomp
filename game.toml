@@ -5,7 +5,7 @@ output_prefix = "yoshis-cookie"
 addr = 0xF424
 inline_bytes = 3
 bank_reg = "A"
-addr_adjust = 1
+addr_adjust = 0
 bs_fn_addr = 0xF46D
 bank_save_addr = 0xBFFF
 
