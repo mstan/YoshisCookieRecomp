@@ -3509,8 +3509,6 @@ int call_by_address(uint16_t addr) {
             func_E4C9(); break;
         case 0xB201:
             func_B201_b3(); break;
-        case 0x9201:
-            func_9201_b3(); break;
         case 0x8A58:
             func_8A58_b3(); break;
         case 0x8A81:
@@ -3746,8 +3744,6 @@ int call_by_address(uint16_t addr) {
             func_B9F9_b4(); break;
         case 0xBA1F:
             func_BA1F_b4(); break;
-        case 0x99F9:
-            func_99F9_b4(); break;
         case 0x9F37:
             func_9F37_b4(); break;
         case 0x9167:
@@ -4541,8 +4537,6 @@ int call_by_address(uint16_t addr) {
             break;
         case 0xC05D:
             func_C05D(); break;
-        case 0x8FFF:
-            func_8FFF_b1(); break;
         case 0x90CA:
             func_90CA_b1(); break;
         case 0x93C4:
