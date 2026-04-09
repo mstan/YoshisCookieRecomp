@@ -23,6 +23,10 @@ bank_save_addr = 0xBFFF
 [[inline_dispatch]]
 addr = 0xF573
 
+# $C000 is a thunk (JMP $F573) — same inline dispatch, different entry point
+[[inline_dispatch]]
+addr = 0xC000
+
 # Bank 1: large data table ($B2E7-$B6FB) — game configuration/level data
 [[data_region]]
 bank = 1
