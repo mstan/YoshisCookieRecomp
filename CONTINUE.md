@@ -1,162 +1,109 @@
 # Yoshi's Cookie NES Recomp — Session Handoff
 
-## What happened
+## Current state
 
-Yoshi's Cookie was migrated from a vendored nesrecomp submodule (pinned
-to `0bb6e99`) to the canonical nesrecomp junction + pin pipeline that
-all 7 sibling games now use. The migration infrastructure is complete
-and committed: junction, pin file, game.toml, CMakeLists pin-check,
-regenerated code (4086 functions). The game builds and runs.
+Game boots, title screen renders correctly, progresses through intro
+animation to options screen. Options screen responds to D-pad/A (settings
+change visible). **Freezes at options screen** — Start button doesn't
+advance game state from $03D9=0x32 to gameplay.
 
-**However, rendering is broken.** The game booted and rendered correctly
-on the old submodule (`0bb6e99`). On canonical (`ed4137f`), it shows
-garbled CHR tiles and nametable corruption — consistent with MMC3 CHR
-bank register state being wrong.
+Audio whine on title screen (APU init issue, not investigated).
 
-## The bug
+## What was fixed this session
+
+1. **Trampoline addr_adjust** (1→0): inline data contains target address
+   directly, no RTS-style +1 needed. Was off-by-one on every bankswitched call.
+2. **Thunk trampoline $C024**: `JMP $F424` alias — bank 0 code uses this
+   instead of direct `JSR $F424`.
+3. **NMI/trampoline bank race**: `call_by_address()` used runtime
+   `g_current_bank` which NMI could change between the bank switch and
+   dispatch. Fix: emit direct `func_XXXX_bN()` using statically-known bank.
+4. **Zero-fill auto-exclusion**: pre-pass detects contiguous $00 runs (≥16
+   bytes) and adds them as data_regions. 191 regions excluded across all banks.
+5. **Data region codegen skip**: codegen now respects data_regions in pre-scan,
+   emission loop, wrapper collection, and dispatch table.
+6. **Sub-$8000 dispatch guard**: `call_by_address()` rejects addr < $8000 early.
+7. **Inline dispatch $F573**: A-indexed pointer table after JSR, properly handled.
+8. **Screenshot TCP command**: `{"cmd":"screenshot","path":"..."}`.
+
+## Metrics
+
+| Metric | Start | End |
+|--------|-------|-----|
+| Game state | Instant crash (frame 0) | Options screen (state 0x32) |
+| Functions | ~4086 (stale) | 6137 |
+| FP_SUSPECT | N/A | 438 |
+| Dispatch misses | 12+ (fatal) | 2 (harmless, sub-$8000) |
+
+## The bug (options screen freeze)
 
 ### Symptom
-Title screen renders with garbled tiles. The tile *data* appears to be
-present (you can see "GO" text fragments and repeating tile patterns)
-but the CHR bank mapping is wrong — tiles are pulled from incorrect
-CHR banks, producing a checkerboard/mosaic of mismatched 8x8 blocks.
+Options screen renders and animates (background scrolls, settings respond
+to D-pad/A). Start button doesn't advance $03D9 from 0x32 to the next
+state. `$03D9` never gets written while on this screen.
 
 ### What it is NOT
-- **Not a dispatch miss.** Two frame-0 misses (`$8104` bank 0, `$8149`
-  bank 4) were found and added to `game.toml`. Without them the game
-  showed a flat gray screen. With them it boots but renders garbled.
-  No further dispatch misses appear in `dispatch_misses.log` during
-  the title screen.
-- **Not a PPU scroll issue.** The garbling is CHR-level (wrong tile
-  graphics), not scroll-level (wrong nametable position). The abs_nt_y
-  and t-register fixes that fixed MM3's stage select are already in
-  canonical and don't help here.
-- **Not a function count issue.** Old regen: ~4084 functions. New regen:
-  4086. The two extras are the dispatch-miss additions.
+- **Not an input issue.** Controller reads via $4016 work — `$00CC` updates
+  every frame via `func_F5C4 < func_F5AD`. D-pad/A inputs change settings.
+- **Not a missing function.** `func_8127_b3` (the bank 3 target called from
+  the options handler) exists and is correctly discovered.
+- **Not a dispatch issue.** Trampoline uses static dispatch now.
 
 ### What it likely IS
-MMC3 CHR bank register handling divergence between the old submodule
-(`0bb6e99`) and canonical (`ed4137f`). Yoshi's Cookie is Mapper 4
-(MMC3) with 8 CHR ROM banks. The MMC3 uses registers R0-R5 to map
-six 1KB or 2KB CHR banks. If the canonical mapper's CHR bank write
-handling differs from the old submodule's (timing, register semantics,
-or initialization), tiles will be pulled from wrong banks.
+The NMI handler at `$C6E7` checks game state `$03D9`. For state 0x32, it
+bypasses the main input handler (`$C746` path where Start is checked) and
+goes directly to `$C7CE` which dispatches to `func_CA0A` (state 50 update).
+`func_CA0A` calls bank 3 `$8127` via trampoline. The Start check must be
+inside `func_8127_b3` or a function it calls.
 
-The old submodule (`0bb6e99`) is from commit `fix: prevent mid-frame
-NMI from corrupting PPU latch and VRAM buffer` — it predates the major
-MMC3 work that went into canonical (8KB bank dispatch, scanline IRQ
-counter, etc.). Between `0bb6e99` and canonical `812d259`, the mapper
-code evolved significantly:
-- `846a8a4` MMC3 8KB bank dispatch
-- `85dc59c` MMC3 IRQ masking, illegal opcode dispatch filter
-- `2f109ef` Expose MMC3 mapper state
-- `48cf8b3` PPU t/v register model
-- `a8db205` Guard t-register scroll sync to MMC3 only
+### Recommended investigation
+1. Read the generated `func_8127_b3` code — verify it reads `$00CC` and
+   checks for bit 3 (Start = 0x08).
+2. If the code looks correct, trace at runtime: does `func_8127_b3` execute?
+   Follow `$00CC` reads during frame processing.
+3. If `func_8127_b3` delegates to another function (likely another trampoline
+   call), check if THAT function exists and works.
+4. The function at bank 3 $8127 starts with `JMP $8FD7` — check if $8FD7
+   in bank 3 is discovered and correct.
 
-Any of these could have introduced a subtle CHR banking behavior change
-that Cookie depends on.
-
-## Recommended debugging approach
-
-### 1. Set up oracle comparison
-Cookie has verify_mode + Nestopia bridge infrastructure already wired
-up. Build with `-DENABLE_NESTOPIA_ORACLE=ON` (requires cloning
-`nestopia-core` manually into the project dir since it's no longer a
-submodule). Run with `--verify` to get native vs oracle RAM diffs.
-
-### 2. Compare CHR bank state at frame 1
-Use TCP debug commands to dump mapper state from both native and oracle:
-```
-# Connect to native (port 4370)
-{"cmd":"mapper_state"}
-
-# Connect to oracle (port 4371, if running --emulated)
-{"cmd":"mapper_state"}
-```
-Compare R0-R5 CHR bank register values. If they diverge at boot,
-that's the root cause.
-
-### 3. Trace $8000 writes
-MMC3 bank select is done by writing to $8000 (bank select register)
-and $8001 (bank data register). The sequence of writes during init
-determines which CHR banks are mapped. Add a follower/watchpoint on
-the mapper write handler to trace every $8000/$8001 write pair and
-compare native vs oracle.
-
-### 4. Check mapper_write in canonical vs old submodule
-The old submodule's `mapper.c` at `0bb6e99` is preserved in the
-format-patch output at:
-```
-F:/Projects/nesrecomp-release/YoshisCookieRecomp/nesrecomp.corrupted/runner/src/mapper.c
-```
-(This may or may not still exist — the canonical clone was re-created
-during a corruption recovery. If not, check out `0bb6e99` from the
-nesrecomp remote: `git -C F:/Projects/nesrecomp fetch origin &&
-git -C F:/Projects/nesrecomp show 0bb6e99:runner/src/mapper.c`.)
-
-Diff `mapper_write()` between old and canonical. Focus on:
-- The $8000/$8001 handler (MMC3 bank select + bank data)
-- CHR bank granularity (1KB vs 2KB vs 8KB)
-- The `mapper_get_chr_bank()` function if it exists
-- Initial bank state at power-on
-
-### 5. Narrower bisect if needed
-If the mapper diff is large, the intermediate commits between `0bb6e99`
-and `812d259` are all on canonical's git history. You can binary-search
-by checking out intermediate SHAs in `F:/Projects/nesrecomp`, rebuilding,
-and testing Cookie.
+### Audio whine
+Title screen plays audio that hangs/loops. APU init or channel handling
+may have a bug. Lower priority than gameplay progression.
 
 ## Key files
 
 | File | Purpose |
 |------|---------|
-| `game.toml` | Recompiler config — trampolines, inline_dispatch, extra funcs, data regions |
-| `extras.c` | Game hooks — TCP debug server at port 4370, verify mode |
-| `verify_mode.c` | Native vs Nestopia comparison (fprintf-based, no ring buffer plumbing) |
-| `CMakeLists.txt` | Build — pin-check block, nestopia oracle option |
-| `nesrecomp.pin` | Pinned to `ed4137f` (LOCAL-ONLY canonical) |
-| `nesrecomp/` | Junction → `F:/Projects/nesrecomp` |
+| `game.toml` | Trampolines ($F424, $C024), inline_dispatch ($F573), data regions |
+| `generated/*.c` | 6137 functions, regenerated with static trampoline dispatch |
+| `nesrecomp.pin` | Pinned to `57e4bf7` (zero-fill, data_region codegen, screenshot) |
+| `extras.c` | TCP debug server hooks |
+| `CLAUDE.md` | Project rules |
+| `TCP.md` | TCP command reference (includes screenshot) |
+| `DEBUG.md` | Debug loop + screenshot docs |
 
 ## Build
 
 ```bash
-cd F:/Projects/nesrecomp-release/YoshisCookieRecomp
+VSCMAKE="/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe"
 
-# Normal (no oracle)
-cmake -B build -S . -G "Visual Studio 17 2022" -A x64 -DENABLE_NESTOPIA_ORACLE=OFF
-cmake --build build --config Release
-./build/Release/YoshisCookieRecomp.exe "Yoshi's Cookie # NES.NES"
+# Full rebuild
+"$VSCMAKE" --build "F:/Projects/nesrecomp-release/recompiler_build" --config Release
+cd "F:/Projects/nesrecomp-release/YoshisCookieRecomp"
+"F:/Projects/nesrecomp-release/recompiler_build/Release/NESRecomp.exe" \
+    "Yoshi's Cookie # NES.NES" --game game.toml
+"$VSCMAKE" --build build --config Release
 
-# With oracle (needs nestopia-core cloned manually)
-git clone https://github.com/libretro/nestopia.git nestopia-core
-cmake -B build -S . -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release
-./build/Release/YoshisCookieRecomp.exe "Yoshi's Cookie # NES.NES" --verify
+# Run
+cd build/Release
+./YoshisCookieRecomp.exe "../../Yoshi's Cookie # NES.NES"
 ```
 
-## ROM details
-- **Mapper 4 (MMC3)**, 8 PRG banks (128 KB), 8 CHR ROM banks (64 KB)
-- Vectors: NMI=$C5C8, RESET=$F6DD, IRQ=$D2E7
-- CRC32 (data): 0x52B58732
+## Nesrecomp commits (on feature/function-finder branch)
 
-## Canonical nesrecomp state
 ```
-ed4137f  ppu_renderer: restore t-register sync, abs_nt_y, g_disable_render_irq
-174b202  function_finder: split-table dispatch with PHA/PHA fake-return
-8619146  function_finder: auto-detect split-table JMP(zp) dispatch
-812d259  debug_server: add debug_server_set_verify_result API          ← origin/master
-32306d0  fix(ppu_renderer): adopt vendored Option A hybrid
-f3d8bd5  fix(ppu_renderer): canonical PPU vertical state machine
+f079640  code_generator: trampoline dispatch uses static bank, not g_current_bank
+57e4bf7  function_finder + codegen: auto-exclude zero-fill regions, guard sub-$8000 dispatch
+5e5a56c  code_generator: skip data_region in pre-scan, emission, wrappers, and dispatch
+230f217  debug_server: add screenshot TCP command
 ```
-
-The top 3 commits are LOCAL-ONLY (not pushed to origin). They exist
-because MM3 needs the function_finder and ppu_renderer work. Cookie
-pins to the same SHA so the junction resolves, but Cookie's bug is
-independent of those 3 commits — the rendering was also broken when
-testing against `812d259` alone (before the ppu_renderer restoration).
-
-## What NOT to do
-- Do not edit `generated/yoshis-cookie_full.c` or `generated/yoshis-cookie_dispatch.c` — fix the tool
-- Do not add fprintf debug logging — use TCP debug server at port 4370
-- Do not guess what the 6502 code does — use Ghidra MCP
-- Do not stub missing functionality — implement it properly in the runner
