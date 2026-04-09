@@ -9,6 +9,15 @@ addr_adjust = 0
 bs_fn_addr = 0xF46D
 bank_save_addr = 0xBFFF
 
+# $C024 is a thunk (JMP $F424) — same trampoline, different entry point
+[[trampoline]]
+addr = 0xC024
+inline_bytes = 3
+bank_reg = "A"
+addr_adjust = 0
+bs_fn_addr = 0xF46D
+bank_save_addr = 0xBFFF
+
 # $CAA0-$CABD: 15-entry pointer table inside func_CA38 (pointers to $CE34-$CF55)
 [[data_region]]
 bank = 7
