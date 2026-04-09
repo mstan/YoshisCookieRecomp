@@ -21,5 +21,12 @@ nesrecomp
 # (-DENABLE_NESTOPIA_ORACLE=OFF). Local dev builds can clone it manually.
 nestopia-core/
 
+# Extracted bank files (copyrighted ROM data)
+banks/
+
 # Local Ghidra project (per-developer reverse engineering workspace)
 ghidra/
+
+# Debug screenshots and CSV audit files
+screen_*.png
+*.csv
