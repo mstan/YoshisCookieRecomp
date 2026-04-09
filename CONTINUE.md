@@ -2,85 +2,107 @@
 
 ## Current state
 
-Game boots, title screen renders correctly, progresses through intro
-animation to options screen. Options screen responds to D-pad/A (settings
-change visible). **Freezes at options screen** — Start button doesn't
-advance game state from $03D9=0x32 to gameplay.
+Game boots, title screen renders, menus work, **1P gameplay fully functional**.
+VS mode reaches the board setup screen (state 0x34) but **stalls** — cookie
+grids don't populate and state never advances. Zero dispatch misses in all
+modes.
 
-Audio whine on title screen (APU init issue, not investigated).
+Audio plays but has a "reset" behavior when navigating certain menu options
+(not yet investigated).
 
 ## What was fixed this session
 
-1. **Trampoline addr_adjust** (1→0): inline data contains target address
-   directly, no RTS-style +1 needed. Was off-by-one on every bankswitched call.
-2. **Thunk trampoline $C024**: `JMP $F424` alias — bank 0 code uses this
-   instead of direct `JSR $F424`.
-3. **NMI/trampoline bank race**: `call_by_address()` used runtime
-   `g_current_bank` which NMI could change between the bank switch and
-   dispatch. Fix: emit direct `func_XXXX_bN()` using statically-known bank.
-4. **Zero-fill auto-exclusion**: pre-pass detects contiguous $00 runs (≥16
-   bytes) and adds them as data_regions. 191 regions excluded across all banks.
-5. **Data region codegen skip**: codegen now respects data_regions in pre-scan,
-   emission loop, wrapper collection, and dispatch table.
-6. **Sub-$8000 dispatch guard**: `call_by_address()` rejects addr < $8000 early.
-7. **Inline dispatch $F573**: A-indexed pointer table after JSR, properly handled.
-8. **Screenshot TCP command**: `{"cmd":"screenshot","path":"..."}`.
+1. **$C000 inline_dispatch thunk**: `$C000` is `JMP $F573`, an alias for the
+   inline dispatch routine. Added as `[[inline_dispatch]]` in game.toml.
+   Without this, `JSR $C000` sites were not getting inline expansion and
+   `func_F573` read garbage from the 6502 stack → $0000/$2000 dispatch misses
+   on every frame.
+
+2. **Inline dispatch table over-read prevention**: `is_valid_dispatch_target()`
+   now rejects entries where the first ROM byte is BRK ($00) and requires
+   discovered functions at ROM targets. Bank detection moved before table
+   counting so the validator has dispatch_bank context.
+
+3. **`dispatch_miss_info` TCP command**: New debug tool exposing caller context
+   on dispatch misses (last_caller, last_stack2, unique_misses, stack bytes).
 
 ## Metrics
 
-| Metric | Start | End |
-|--------|-------|-----|
-| Game state | Instant crash (frame 0) | Options screen (state 0x32) |
-| Functions | ~4086 (stale) | 6137 |
-| FP_SUSPECT | N/A | 438 |
-| Dispatch misses | 12+ (fatal) | 2 (harmless, sub-$8000) |
+| Metric | Start of session | End |
+|--------|-----------------|-----|
+| Game state | Title screen (0x01) | 1P gameplay (0x07+), VS board (0x34) |
+| Dispatch misses | hundreds/frame ($0000/$2000) | 0 |
+| Functions | 6137 | 6221 (+84 from inline dispatch) |
+| FP_SUSPECT | 438 | 465 |
+| Undefined link symbols | 6 (fatal) | 0 (14 C4013 warnings, non-fatal) |
 
-## The bug (options screen freeze)
+## Known bugs
 
-### Symptom
-Options screen renders and animates (background scrolls, settings respond
-to D-pad/A). Start button doesn't advance $03D9 from 0x32 to the next
-state. `$03D9` never gets written while on this screen.
+### VS mode freeze (state 0x34)
+- VS mode reaches the board setup screen but stalls
+- State $03D9 = 0x34, never advances
+- `func_CE79` (NMI handler for state 52) calls bank 3 $815A/$815D then
+  checks controller input — if no input, returns immediately
+- `func_C54F` (third dispatch table) calls bank 4 $8100/$812D/$812A
+- Zero dispatch misses — not a missing function issue
+- Likely a game logic bug: some initialization flag or counter not being
+  set correctly during the VS board setup sequence
 
-### What it is NOT
-- **Not an input issue.** Controller reads via $4016 work — `$00CC` updates
-  every frame via `func_F5C4 < func_F5AD`. D-pad/A inputs change settings.
-- **Not a missing function.** `func_8127_b3` (the bank 3 target called from
-  the options handler) exists and is correctly discovered.
-- **Not a dispatch issue.** Trampoline uses static dispatch now.
+### Music reset on menu navigation
+- Audio resets/restarts when navigating certain menu options
+- Not investigated yet — may be APU init or channel handling issue
 
-### What it likely IS
-The NMI handler at `$C6E7` checks game state `$03D9`. For state 0x32, it
-bypasses the main input handler (`$C746` path where Start is checked) and
-goes directly to `$C7CE` which dispatches to `func_CA0A` (state 50 update).
-`func_CA0A` calls bank 3 `$8127` via trampoline. The Start check must be
-inside `func_8127_b3` or a function it calls.
+### C4013 dispatch warnings (14 functions)
+- Dispatch table references functions not emitted by codegen:
+  `func_B3A5_b5`, `func_85A9_b5`, `func_85CF_b5`, `func_A077_b5`,
+  `func_A5AC_b5`, `func_A91E_b5`, `func_A9B7_b5`, `func_A347_b6`,
+  `func_A36C_b6`, `func_AB79_b6`, `func_AB92_b6`, `func_ABAB_b6`,
+  `func_ABC4_b6`, `func_90AD_b3`
+- These are in the raw function list but filtered out by the emission
+  criteria (evidence_count=1, control-only). Non-fatal — they return 0.
 
-### Recommended investigation
-1. Read the generated `func_8127_b3` code — verify it reads `$00CC` and
-   checks for bit 3 (Start = 0x08).
-2. If the code looks correct, trace at runtime: does `func_8127_b3` execute?
-   Follow `$00CC` reads during frame processing.
-3. If `func_8127_b3` delegates to another function (likely another trampoline
-   call), check if THAT function exists and works.
-4. The function at bank 3 $8127 starts with `JMP $8FD7` — check if $8FD7
-   in bank 3 is discovered and correct.
+## Function finder feedback (for feature/function-finder branch)
 
-### Audio whine
-Title screen plays audio that hangs/loops. APU init or channel handling
-may have a bug. Lower priority than gameplay progression.
+1. **JMP-thunk detection**: Auto-detect single-instruction `JMP <target>`
+   thunks and propagate trampoline/inline_dispatch semantics through them.
+   Currently requires manual game.toml entries for each alias.
+
+2. **Inline dispatch table BRK guard**: Reject entries pointing to $00 (BRK)
+   bytes as a generic termination condition, not just `hi byte < $80`.
+
+3. **FP_SUSPECT → codegen mismatch**: Function finder discovers entries that
+   the emission filter later rejects. Codegen's inline dispatch validator
+   sees them in the raw function list and emits references to undefined
+   functions. Pre-filter the list or check emission eligibility in codegen.
+
+## Nesrecomp commits (feature/function-finder branch)
+
+```
+da2ba54  codegen: inline dispatch table validation + dispatch_miss_info TCP command
+f079640  code_generator: trampoline dispatch uses static bank, not g_current_bank
+57e4bf7  function_finder + codegen: auto-exclude zero-fill regions, guard sub-$8000 dispatch
+5e5a56c  code_generator: skip data_region in pre-scan, emission, wrappers, and dispatch
+230f217  debug_server: add screenshot TCP command
+```
+
+## Game repo commits
+
+```
+ff2d691  game.toml: add $C000 inline_dispatch thunk; regen with table validation
+8b7c727  docs: update CONTINUE.md handoff — options screen freeze investigation
+a5ab2f9  game.toml: remove stale data_region, regen with static trampoline dispatch
+```
 
 ## Key files
 
 | File | Purpose |
 |------|---------|
-| `game.toml` | Trampolines ($F424, $C024), inline_dispatch ($F573), data regions |
-| `generated/*.c` | 6137 functions, regenerated with static trampoline dispatch |
-| `nesrecomp.pin` | Pinned to `57e4bf7` (zero-fill, data_region codegen, screenshot) |
+| `game.toml` | Trampolines ($F424, $C024), inline_dispatch ($F573, $C000), data regions |
+| `generated/*.c` | 6221 functions, regenerated with table validation |
+| `nesrecomp.pin` | Pinned to `57e4bf7` (needs update to da2ba54) |
 | `extras.c` | TCP debug server hooks |
 | `CLAUDE.md` | Project rules |
-| `TCP.md` | TCP command reference (includes screenshot) |
-| `DEBUG.md` | Debug loop + screenshot docs |
+| `TCP.md` | TCP command reference (includes screenshot, dispatch_miss_info) |
 
 ## Build
 
@@ -97,13 +119,4 @@ cd "F:/Projects/nesrecomp-release/YoshisCookieRecomp"
 # Run
 cd build/Release
 ./YoshisCookieRecomp.exe "../../Yoshi's Cookie # NES.NES"
-```
-
-## Nesrecomp commits (on feature/function-finder branch)
-
-```
-f079640  code_generator: trampoline dispatch uses static bank, not g_current_bank
-57e4bf7  function_finder + codegen: auto-exclude zero-fill regions, guard sub-$8000 dispatch
-5e5a56c  code_generator: skip data_region in pre-scan, emission, wrappers, and dispatch
-230f217  debug_server: add screenshot TCP command
 ```
