@@ -4709,6 +4709,13 @@ int call_by_address(uint16_t addr) {
                 default: nes_log_dispatch_miss(addr); return 0;
             }
             break;
+        case 0xA5CE:
+            switch (g_current_bank) {
+                case 1: func_A5CE_b1(); break;
+                case 4: func_A5CE_b4(); break;
+                default: nes_log_dispatch_miss(addr); return 0;
+            }
+            break;
         case 0xA560:
             switch (g_current_bank) {
                 case 1: func_A560_b1(); break;
