@@ -71,6 +71,14 @@ Send `{"cmd":"NAME", ...}\n`, receive JSON response.
 | `set_input` | `buttons` | Override controller input |
 | `clear_input` | — | Remove input override |
 
+## Screenshot
+
+| Command | Params | Description |
+|---------|--------|-------------|
+| `screenshot` | `path` (opt) | Save framebuffer as PNG. Defaults to `screenshot_NNNN.png` in CWD |
+
+Example: `{"cmd":"screenshot","path":"C:/temp/shot.png"}`
+
 ## Debug
 
 | Command | Params | Description |

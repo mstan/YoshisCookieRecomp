@@ -22,6 +22,13 @@ If S is too low, NMI pushes overwrite the VRAM buffer → garbled tiles.
 - NMI-ENTRY/NMI-EXIT stderr traces: prints S around NMI push/restore
 - PRE-RENDER/POST-RENDER stderr traces: prints S around ppu_render_frame
 
+### Screenshot capture
+
+- TCP: `{"cmd":"screenshot","path":"path/to/file.png"}` — saves current framebuffer as PNG
+- Path is optional; defaults to `screenshot_NNNN.png` in the game's working directory
+- Uses `runner_screenshot()` → `stb_image_write` (ARGB8888 → RGB8 PNG)
+- From CLI: `echo '{"cmd":"screenshot","path":"shot.png"}' | ncat -w 2 127.0.0.1 4370`
+
 ### Python inspection scripts
 
 - `inspect.py [port]` — registers, mapper state, stack page, PPU state
