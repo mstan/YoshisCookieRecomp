@@ -152,3 +152,5 @@ int game_handle_debug_cmd(const char *cmd, int id, const char *json) {
     (void)cmd; (void)id; (void)json;
     return 0;
 }
+
+void game_post_render(uint32_t *framebuf) { (void)framebuf; }

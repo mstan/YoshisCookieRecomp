@@ -6,6 +6,12 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(NESRECOMP_ROOT ${CMAKE_SOURCE_DIR}/nesrecomp)
 
+# ---- Nestopia Oracle (optional) ----
+option(ENABLE_NESTOPIA_ORACLE "Build with Nestopia emulator oracle for verify mode" ON)
+if(ENABLE_NESTOPIA_ORACLE)
+    set(NESTOPIA_DIR "${CMAKE_SOURCE_DIR}/nestopia-core")
+endif()
+
 # ---- nesrecomp pin check ----
 if(EXISTS "${CMAKE_SOURCE_DIR}/nesrecomp.pin")
     file(STRINGS "${CMAKE_SOURCE_DIR}/nesrecomp.pin" _PIN_LINES)
@@ -55,13 +61,6 @@ endif()
 
 include(${NESRECOMP_ROOT}/runner/runner.cmake)
 
-# ---- Nestopia Oracle (optional) ----
-option(ENABLE_NESTOPIA_ORACLE "Build with Nestopia emulator oracle for verify mode" ON)
-
-if(ENABLE_NESTOPIA_ORACLE)
-    include(${CMAKE_SOURCE_DIR}/nestopia_cmake.cmake)
-endif()
-
 list(APPEND CMAKE_PREFIX_PATH "${NESRECOMP_ROOT}/runner/external/SDL2/cmake")
 find_package(SDL2 REQUIRED)
 
@@ -86,15 +85,8 @@ target_link_libraries(YoshisCookieRecomp PRIVATE ${SDL2_LIBRARIES})
 target_compile_definitions(YoshisCookieRecomp PRIVATE RECOMP_STACK_TRACKING NES_TRACE_STACK_WRITES)
 
 if(ENABLE_NESTOPIA_ORACLE)
-    target_sources(YoshisCookieRecomp PRIVATE
-        nestopia_bridge.cpp
-    )
     target_link_libraries(YoshisCookieRecomp PRIVATE nestopia_core)
     target_compile_definitions(YoshisCookieRecomp PRIVATE ENABLE_NESTOPIA_ORACLE)
-    target_include_directories(YoshisCookieRecomp PRIVATE
-        ${CMAKE_SOURCE_DIR}/nestopia-core/libretro
-        ${CMAKE_SOURCE_DIR}/nestopia-core/libretro/libretro-common/include
-    )
 endif()
 
 if(WIN32)
