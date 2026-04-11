@@ -1,2 +1,6 @@
+# nesrecomp.pin — pins this game's expected nesrecomp version.
+# First-time setup: run setup.sh (Linux/macOS) or setup.bat (Windows).
+# To update: change sha, re-run the setup script, commit this file.
+
 branch = origin/master
 sha    = 2b9d0dccb65b7298922d02d6474bdec0e582f911

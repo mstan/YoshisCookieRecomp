@@ -41,8 +41,22 @@ Built with the [NESRecomp](https://github.com/mstan/nesrecomp) framework.
 Requires Visual Studio 2022 and CMake 3.20+.
 
 ```bash
-git clone --recursive https://github.com/mstan/YoshisCookieRecomp
+git clone https://github.com/mstan/YoshisCookieRecomp
 cd YoshisCookieRecomp
+
+# Windows
+setup.bat
+
+# Linux / macOS
+chmod +x setup.sh && ./setup.sh
+```
+
+This clones [nesrecomp](https://github.com/mstan/nesrecomp) at the exact
+version pinned in `nesrecomp.pin` and links the Nestopia oracle core.
+
+Then build:
+
+```bash
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 ```
