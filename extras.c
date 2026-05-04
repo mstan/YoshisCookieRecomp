@@ -32,9 +32,11 @@ void game_on_init(void) {
         verify_mode_init(g_rom_path_for_extras);
     }
 
-    /* Auto-register followers on stack-page addresses where native has $97/$22
-     * garbage and emu has tile-index VRAM update data. F4C0 reads stack page
-     * as VRAM buffer, so we want to find who populates this buffer on native. */
+    /* Auto-register followers on stack-page addresses for VRAM buffer
+     * investigation — disabled: legacy debug_server_add_follower API
+     * removed at nesrecomp commit 69ecd30. Tier 2.5 replacement is
+     * rdb_watch_add (TCP-driven). Re-port when the migration is done. */
+#if 0
     debug_server_add_follower(0x0100, -1);
     debug_server_add_follower(0x0101, -1);
     debug_server_add_follower(0x0102, -1);
@@ -42,6 +44,7 @@ void game_on_init(void) {
     debug_server_add_follower(0x0105, -1);
     debug_server_add_follower(0x0107, -1);
     debug_server_add_follower(0x0108, -1);
+#endif
 }
 
 void game_on_frame(uint64_t frame_count) { (void)frame_count; }

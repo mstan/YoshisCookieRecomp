@@ -2,5 +2,5 @@
 # First-time setup: run setup.sh (Linux/macOS) or setup.bat (Windows).
 # To update: change sha, re-run the setup script, commit this file.
 
-branch = origin/master
-sha    = 204740f8f0949cba906bf5f14e7a1ebe23026ca6
+branch = audit/cpu-coverage-2026-05
+sha    = 7d394316ba6f74d2ea005f76bc2b9d91cfe77dee
