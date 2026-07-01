@@ -69,7 +69,6 @@ add_executable(YoshisCookieRecomp
     extras.c
     nes_snapshot.c
     verify_mode.c
-    recomp_stack.c
     generated/yoshis-cookie_full.c
     generated/yoshis-cookie_dispatch.c
 )

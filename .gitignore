@@ -29,3 +29,8 @@ ghidra/
 # Debug screenshots and CSV audit files
 screen_*.png
 *.csv
+
+# build + release artifacts
+build_release/
+build_debug/
+release/
