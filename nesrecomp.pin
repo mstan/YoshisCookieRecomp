@@ -3,4 +3,4 @@
 # To update: change sha, re-run the setup script, commit this file.
 
 branch = master
-sha    = 48c6aa93fb871e13e15c9ad1b9c1a6b16b58084f
+sha    = b018c86d85fc4653fc7596d9748d36aea2e49f36

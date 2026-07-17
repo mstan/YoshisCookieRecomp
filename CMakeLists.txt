@@ -102,6 +102,10 @@ if(MSVC)
     target_compile_options(YoshisCookieRecomp PRIVATE /wd4102)
 endif()
 
-# ---- Pre-boot GUI launcher (RmlUi) ----
-include(${NESRECOMP_ROOT}/runner/launcher.cmake)
-nesrecomp_add_launcher(YoshisCookieRecomp)
+# ---- Pre-boot GUI launcher (recomp-ui / Dear ImGui) ----
+include(${CMAKE_SOURCE_DIR}/recomp-ui/recomp_ui.cmake)
+recomp_target_launcher_ui(YoshisCookieRecomp BOXART ${CMAKE_SOURCE_DIR}/boxart.tga)
+if(WIN32)
+    # OpenGL for the ImGui GL3 backend (previously via the RmlUi launcher.cmake).
+    target_link_libraries(YoshisCookieRecomp PRIVATE opengl32)
+endif()
