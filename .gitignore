@@ -12,7 +12,6 @@ debug.ini
 disasm_ref/
 tmp_*.py
 
-
 # nestopia-core was a submodule for verify mode. Removed from CI builds
 # (-DENABLE_NESTOPIA_ORACLE=OFF). Local dev builds can clone it manually.
 nestopia-core/
@@ -31,3 +30,5 @@ screen_*.png
 build_release/
 build_debug/
 release/
+
+build_ui/
