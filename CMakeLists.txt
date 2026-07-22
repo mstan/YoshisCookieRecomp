@@ -6,12 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(NESRECOMP_ROOT ${CMAKE_SOURCE_DIR}/nesrecomp)
 
-# ---- Nestopia Oracle (optional) ----
-option(ENABLE_NESTOPIA_ORACLE "Build with Nestopia emulator oracle for verify mode" ON)
-if(ENABLE_NESTOPIA_ORACLE)
-    set(NESTOPIA_DIR "${CMAKE_SOURCE_DIR}/nestopia-core")
-endif()
-
 # nesrecomp/ and recomp-ui/ are git submodules (see .gitmodules); the pinned
 # commit is the gitlink recorded in this repo. After cloning run setup.sh/.bat
 # (git submodule update --init) to fetch them at the recorded commits.
@@ -39,11 +33,6 @@ target_include_directories(YoshisCookieRecomp PRIVATE
 target_link_libraries(YoshisCookieRecomp PRIVATE ${SDL2_LIBRARIES})
 
 target_compile_definitions(YoshisCookieRecomp PRIVATE RECOMP_STACK_TRACKING NES_TRACE_STACK_WRITES)
-
-if(ENABLE_NESTOPIA_ORACLE)
-    target_link_libraries(YoshisCookieRecomp PRIVATE nestopia_core)
-    target_compile_definitions(YoshisCookieRecomp PRIVATE ENABLE_NESTOPIA_ORACLE)
-endif()
 
 if(WIN32)
     target_link_libraries(YoshisCookieRecomp PRIVATE ws2_32)
