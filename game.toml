@@ -1,4 +1,5 @@
 [game]
+name = "Yoshi's Cookie"
 output_prefix = "yoshis-cookie"
 
 [[trampoline]]

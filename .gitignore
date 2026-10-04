@@ -32,3 +32,7 @@ build_debug/
 release/
 
 build_ui/
+
+cycle-evidence/
+build-cycle/
+build-legacy/

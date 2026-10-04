@@ -4,11 +4,33 @@ project(YoshisCookieRecomp C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-set(NESRECOMP_ROOT ${CMAKE_SOURCE_DIR}/nesrecomp)
+set(NESRECOMP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/nesrecomp" CACHE PATH "NESRecomp engine checkout")
 
 # nesrecomp/ and recomp-ui/ are git submodules (see .gitmodules); the pinned
 # commit is the gitlink recorded in this repo. After cloning run setup.sh/.bat
 # (git submodule update --init) to fetch them at the recorded commits.
+
+set(NESRECOMP_BACKEND "cycle" CACHE STRING "CPU backend: cycle or legacy")
+set_property(CACHE NESRECOMP_BACKEND PROPERTY STRINGS cycle legacy)
+if(NESRECOMP_BACKEND STREQUAL "cycle")
+    set(NESRECOMP_ROM "" CACHE FILEPATH "ROM image to recompile (not distributed)")
+    set(NESRECOMP_CYCLE_SEEDS "${CMAKE_CURRENT_SOURCE_DIR}/cyc_seeds.txt" CACHE FILEPATH "Cycle coverage seeds")
+    set(NESRECOMP_HOST_COMPILER "" CACHE FILEPATH "Optional prebuilt host NESRecomp compiler")
+    if(NOT EXISTS "${NESRECOMP_ROM}")
+        message(FATAL_ERROR "Set NESRECOMP_ROM to the original ROM image for this title")
+    endif()
+    include("${NESRECOMP_ROOT}/runner/cyc/project.cmake")
+    nesrecomp_add_cycle_game(YoshisCookieRecomp
+        ROM "${NESRECOMP_ROM}"
+        GAME_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/game.toml"
+        RECOMPILER "${NESRECOMP_HOST_COMPILER}"
+        SEED_FILE "${NESRECOMP_CYCLE_SEEDS}"
+        PLAYERS 2
+        BOXART "${CMAKE_CURRENT_SOURCE_DIR}/boxart.tga")
+    return()
+elseif(NOT NESRECOMP_BACKEND STREQUAL "legacy")
+    message(FATAL_ERROR "NESRECOMP_BACKEND must be cycle or legacy")
+endif()
 
 include(${NESRECOMP_ROOT}/runner/runner.cmake)
 
@@ -49,5 +71,6 @@ if(MSVC)
 endif()
 
 # ---- Pre-boot GUI launcher (recomp-ui / Dear ImGui) ----
-include(${CMAKE_SOURCE_DIR}/recomp-ui/recomp_ui.cmake)
-recomp_target_launcher_ui(YoshisCookieRecomp BOXART ${CMAKE_SOURCE_DIR}/boxart.tga)
+set(NESRECOMP_RECOMP_UI "${CMAKE_CURRENT_SOURCE_DIR}/recomp-ui" CACHE PATH "recomp-ui checkout")
+include("${NESRECOMP_RECOMP_UI}/recomp_ui.cmake")
+recomp_target_launcher_ui(YoshisCookieRecomp CONSOLE nes BOXART ${CMAKE_SOURCE_DIR}/boxart.tga)
